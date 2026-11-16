@@ -168,8 +168,10 @@ class ReceiverActivity : Activity(), SurfaceHolder.Callback {
                 val info = MediaCodec.BufferInfo()
                 var data = ByteArray(1 shl 20)
                 var frames = 0
+                var hidden = false
                 while (streaming) {
                     val len = rd.int(); val flags = rd.int()
+                    if (len == -1) throw IOException("sender stopped")
                     if (len < 0 || len > 16_000_000) throw IOException("bad packet $len")
                     if (len > data.size) data = ByteArray(len)
                     rd.read(data, len)
@@ -182,7 +184,7 @@ class ReceiverActivity : Activity(), SurfaceHolder.Callback {
                         val o = dec.dequeueOutputBuffer(info, 0)
                         if (o >= 0) { dec.releaseOutputBuffer(o, true); frames++ } else break
                     }
-                    if (frames == 5) { log("Video playing"); runOnUiThread { tv.visibility = View.GONE } }
+                    if (frames >= 5 && !hidden) { hidden = true; log("Video playing"); runOnUiThread { tv.visibility = View.GONE } }
                 }
             } catch (e: Exception) {
                 log("Stream ended: ${e.message}")
